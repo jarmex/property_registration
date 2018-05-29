@@ -1,0 +1,6 @@
+{
+  "extends": ["equimper"],
+  "rules": {
+    "import/no-unresolved":[2]
+  }
+}
