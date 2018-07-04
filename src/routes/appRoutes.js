@@ -15,10 +15,16 @@ import LoginPage from '../screens/Login/Login';
 import HomePage from '../screens/HomePage/HomePage';
 import LoadConfigurations from '../screens/LoaderPage/LoadDataToMemory';
 import TakePicture from '../screens/Registration/Property/TakePicture';
+import ResendData from '../screens/Registration/Property/ResendData';
+import CustomerDetails from '../screens/Registration/Customer/CustomerDetails';
+import SearchProperty from '../screens/SearchProperty/SearchProperties';
+import TransactionHistory from '../screens/History/TransactionHistory';
+import PaymentOptions from '../screens/Payments/PaymentTypes';
+import QueryInvoices from '../screens/Invoices/QueryInvoices';
 
 const transitionConfig = () => ({
   transitionSpec: {
-    duration: 300,
+    duration: 100, // 300
     easing: Easing.out(Easing.poly(4)),
     timing: Animated.timing,
   },
@@ -51,6 +57,12 @@ const appStackNavigation = createStackNavigator(
     newproperty: NewProperty,
     loadconfiguration: LoadConfigurations,
     takepicture: TakePicture,
+    resenddata: ResendData,
+    customerdetails: CustomerDetails,
+    searchproperty: SearchProperty,
+    history: TransactionHistory,
+    invoices: QueryInvoices,
+    paymentoptions: PaymentOptions,
   },
   {
     initialRouteName: 'home',

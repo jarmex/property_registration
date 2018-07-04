@@ -11,12 +11,13 @@ import {
   Picker,
   Icon,
 } from 'native-base';
+
 import { Button, StatusBarEx } from '../../../components';
 import { formatError } from '../../../util';
 import { UserConsumer, LocalData } from '../../../hoc';
 import { CreatePropertyQL } from './graphql';
-import { futch } from './util';
 import config from '../../../../config';
+import { futch } from './util';
 
 class NewProperty extends Component {
   static navigationOptions = {
@@ -36,18 +37,13 @@ class NewProperty extends Component {
       createdby: 1,
       digitaladdress: '',
       electoralareaid: undefined,
-      progress: 0,
     };
     this.assemblyid = undefined;
   }
 
-  handleNewCustomer = async (mutate, localdata) => {
-    const { registerdata, onNewProperty, onClearProperty } = localdata;
+  handleNewCustomer = async (mutate, localstate, user) => {
     const { params } = this.props.navigation.state;
-    console.log('REGISTERDATA', registerdata);
-    // save the information to database
-    const { progress, ...rest } = this.state;
-    const newproperty = Object.assign({}, rest, {
+    const newproperty = Object.assign({}, this.state, {
       ownerid: params.id,
       assemblyid: this.assemblyid,
     });
@@ -59,6 +55,13 @@ class NewProperty extends Component {
         'Unknow Assembly',
         'The system is not able to determine the assembly assigned to you. Please logout and login again.',
       );
+    }
+    if (!newproperty.electoralareaid) {
+      return Alert.alert('Electora Area', 'The Electora Area is required');
+    }
+    if (!newproperty.structuretypeid) {
+      Alert.alert('Structure Type', 'Select Structure type from the list');
+      return;
     }
     if (!newproperty.streetname) {
       return Alert.alert(
@@ -72,82 +75,101 @@ class NewProperty extends Component {
         'The Electoral Area is required',
       );
     }
+
     try {
-      const result = await mutate({
-        variables: {
-          building: { ...newproperty },
-        },
-      });
-      // TODO:
-
-      // dataToSend.append
-      // get the property ID and upload the information to the memory for future upload if the online upload fails
-      // get the data from the memory where id matches
-      if (registerdata !== null || registerdata.length > 0) {
-        const propertyid = result.data.createProperty.id;
-        // update the memory data if saving to remote server fails
-        const savedata = registerdata.filter(
-          (sdata) => sdata.ownerid === newproperty.ownerid,
+      let result = null;
+      const { lstate, registerdata, onStateChange, onNewProperty } = localstate;
+      try {
+        result = await mutate({
+          variables: {
+            building: { ...newproperty },
+          },
+        });
+      } catch (error) {
+        // save to device memory
+        const { property, ...others } = lstate;
+        const modifyPropertyToAddImages = Object.assign({}, newproperty, {
+          images: property,
+          type: 'property',
+        });
+        // save others back to memory
+        onStateChange(others);
+        // save to device disk
+        const datatosave = [...registerdata, modifyPropertyToAddImages];
+        await onNewProperty(datatosave);
+        // alert the user of failed to save data to remote server
+        Alert.alert(
+          'Unsave Data',
+          `Unable to save data to remote server. The data is save locally on the device. 
+            Use Re-Send data to push the data to server`,
         );
-        const newdata = savedata.map((updata) =>
-          Object.assign({}, updata, { propertyid }),
-        );
-        // save to applicaton database. if the save is successfully remove the item from memory
-        // if not successful update memory with the propertyid
-
-        if (newdata !== null && newdata.length > 0) {
-          // use only the first data to save to database
-          const datatoSave = newdata[0];
-          console.log(datatoSave);
-          const dataToSend = new FormData();
-          dataToSend.append('name', datatoSave.name);
-          dataToSend.append('ownerid', datatoSave.ownerid);
-          dataToSend.append('propertyid', datatoSave.propertyid);
-          dataToSend.append('type', datatoSave.type);
-          datatoSave.data.forEach((photo, index) => {
-            dataToSend.append('longitude', photo.coords.longitude);
-            dataToSend.append('latitude', photo.coords.latitude);
-            dataToSend.append('photos', {
-              uri: photo.orginalUrl,
-              type: 'image/jpeg',
-              name: `photos-${index}`,
-            });
-          });
-          console.log(dataToSend);
-          try {
-            const res = await futch(
-              config.updatePhotosURL,
-              {
-                method: 'post',
-                body: dataToSend,
-              },
-              (e) => {
-                const progressIndicator = e.loaded / e.total;
-                console.log(progressIndicator, progress);
-                this.setState({
-                  progress: progressIndicator,
-                });
-              },
-            );
-            console.log(res);
-            // update the existing data
-            const mydata = registerdata.filter(
-              (dremove) => dremove.ownerid !== newproperty.ownerid,
-            );
-            if (mydata === null || mydata.length === 0) {
-              await onClearProperty();
-            } else {
-              await onNewProperty(mydata);
-            }
-          } catch (errors) {
-            console.log(errors);
-          }
-        }
+        return;
       }
+      // upload images here
+      this._uploadimages(result, localstate, user);
 
-      Alert.alert('Success', 'Property successfully registered');
+      Alert.alert(
+        'Success',
+        'Property successfully registered.',
+        [
+          {
+            text: 'Home',
+            onPress: () => {
+              this.props.navigation.popToTop();
+            },
+          },
+        ],
+        { cancelable: false },
+      );
     } catch (error) {
       Alert.alert('Error', formatError(error));
+    }
+  };
+
+  _uploadimages = async (result, localstate, user) => {
+    if (result === null) return;
+    const { lstate, registerdata, onNewProperty, onStateChange } = localstate;
+    const { property, ...rest } = lstate;
+
+    const dataToSend = new FormData();
+    dataToSend.append('name', this.state.name);
+    dataToSend.append('ownerid', property.ownerid);
+    dataToSend.append('propertyid', result.data.createProperty.id);
+    dataToSend.append('longitude', property.longitude);
+    dataToSend.append('latitude', property.latitude);
+    dataToSend.append('accuracy', property.accuracy);
+    dataToSend.append('createdby', user.id);
+    property.imagepath.forEach((item) => {
+      // get the file name here
+      const filename = item.split('/').pop();
+      dataToSend.append('photos', {
+        uri: item,
+        type: 'image/jpg',
+        name: filename,
+      });
+    });
+    // console.log(dataToSend);
+    try {
+      await futch(config.updatePhotosURL, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Content-Type': 'multipart/form-data',
+        },
+        method: 'POST',
+        body: dataToSend,
+      });
+      // console.log(res);
+      onStateChange(rest);
+    } catch (error) {
+      // console.log(error);
+      // save to disk and clear the memory for this property data
+      const sTodisk = Object.assign({}, property, {
+        propertyid: result.data.createProperty.id,
+      });
+      const datatosave = [...registerdata, sTodisk];
+      await onNewProperty(datatosave);
+      onStateChange(rest);
+      throw error;
     }
   };
 
@@ -162,7 +184,7 @@ class NewProperty extends Component {
               this.assemblyid = user.assembly.id;
               return (
                 <LocalData>
-                  {({ data, ...localdata }) => (
+                  {({ data, ...rest }) => (
                     <Form>
                       <Item floatingLabel>
                         <Label>Property Name</Label>
@@ -196,6 +218,7 @@ class NewProperty extends Component {
                             this.setState({ electoralareaid })
                           }
                         >
+                          <Picker.Item label="Select ...." value="" />
                           {data.electoralarea &&
                             data.electoralarea.map((earea) => (
                               <Picker.Item
@@ -220,6 +243,7 @@ class NewProperty extends Component {
                             this.setState({ structuretypeid })
                           }
                         >
+                          <Picker.Item label="Select ...." value="" />
                           {data.structuretype.map((stype) => (
                             <Picker.Item
                               label={stype.name}
@@ -296,7 +320,7 @@ class NewProperty extends Component {
                         {(mutate) => (
                           <Button
                             onPress={() =>
-                              this.handleNewCustomer(mutate, localdata)
+                              this.handleNewCustomer(mutate, rest, user)
                             }
                             style={{ marginTop: 15, marginBottom: 15 }}
                           >

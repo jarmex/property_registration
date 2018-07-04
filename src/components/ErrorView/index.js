@@ -4,7 +4,9 @@ import PropTypes from 'prop-types';
 import { CenterView } from '../styles';
 
 const Text = styled.Text`
-  font-size: 14;
+  font-size: 18;
+  text-align: center;
+  padding-horizontal: 16;
 `;
 
 const ErrorView = ({ message, children }) => (

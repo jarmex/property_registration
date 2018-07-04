@@ -4,8 +4,7 @@ import { Text, Icon, ListItem, Body, Right } from 'native-base';
 import { Query } from 'react-apollo';
 import { QueryCustomersGQL } from './graphql';
 import { formatError } from '../../../util';
-import SearchCustomerBar from './SearchCustomerBar';
-import { FabEx, ErrorView, LoadingView } from '../../../components';
+import { FabEx, ErrorView, LoadingView, SearchBar } from '../../../components';
 
 class CustomerRegistration extends Component {
   static navigationOptions = {
@@ -20,10 +19,14 @@ class CustomerRegistration extends Component {
   onAddNewCustomerForm = () => {
     this.props.navigation.navigate('newcustomer');
   };
-  onViewProperty = (owner) => {
-    this.props.navigation.navigate('pregistration', {
+  onCustomerDetails = (owner) => {
+    this.props.navigation.navigate('customerdetails', {
       ...owner,
     });
+  };
+  _handleSearch = (searchvalue) => {
+    // console.log(searchvalue);
+    this.setState({ search: searchvalue });
   };
   renderButton = () => (
     <FabEx
@@ -35,6 +38,7 @@ class CustomerRegistration extends Component {
       <Icon name="add" />
     </FabEx>
   );
+
   render() {
     return (
       <Query
@@ -42,7 +46,16 @@ class CustomerRegistration extends Component {
         variables={{ search: this.state.search }}
       >
         {({ data, loading, error, networkStatus }) => {
-          if (networkStatus === 4) return <Text>Refetching!</Text>;
+          if (networkStatus === 8) {
+            return (
+              <ErrorView message="No network connection. Contact System administrator if issue persist">
+                {this.renderButton()}
+              </ErrorView>
+            );
+          }
+          if (networkStatus === 4) {
+            return <Text>Refetching!</Text>;
+          }
           if (loading) {
             return <LoadingView />;
           }
@@ -59,7 +72,7 @@ class CustomerRegistration extends Component {
               <FlatList
                 data={getcustomers}
                 renderItem={({ item }) => (
-                  <ListItem onPress={() => this.onViewProperty(item)}>
+                  <ListItem onPress={() => this.onCustomerDetails(item)}>
                     <Body>
                       <Text>{item.name}</Text>
                       <Text note>
@@ -73,8 +86,8 @@ class CustomerRegistration extends Component {
                 )}
                 keyExtractor={({ id }) => `ID-${id}`}
                 ListHeaderComponent={
-                  <SearchCustomerBar
-                    onSearchUpdate={(search) => this.setState({ search })}
+                  <SearchBar
+                    onSearchUpdate={(search) => this._handleSearch(search)}
                   />
                 }
               />

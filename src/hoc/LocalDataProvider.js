@@ -8,13 +8,16 @@ const { Provider, Consumer } = React.createContext();
 export class LocalDataProvider extends React.Component {
   state = {
     data: {},
-    registerdata: null,
+    registerdata: [],
+    lstate: {},
+    onStateChange: (newstate) => this.setState({ lstate: newstate }),
     onClearProperty: async () =>
       this.clearSaveData(StorageKey.registerdata, 'registerdata'),
     onNewProperty: async (propertydata) =>
       this.saveLocalData(propertydata, StorageKey.registerdata, 'registerdata'),
     onSaveData: async (localData) =>
       this.saveLocalData(localData, StorageKey.data, 'data'),
+    onClearData: async () => this.clearSaveData(StorageKey.data, 'data'),
   };
 
   async componentWillMount() {

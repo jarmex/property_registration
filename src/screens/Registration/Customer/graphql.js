@@ -22,6 +22,28 @@ export const QueryCustomersGQL = gql`
   }
 `;
 
+export const CUSTOMER_QL = gql`
+  query getcustomers($id: Int!) {
+    customer(id: $id) {
+      id
+      name
+      code
+      longitude
+      latitude
+      primaryPhone
+      secondaryPhone
+      email
+      idtype
+      idnumber
+      addressone
+      addresstwo
+      tin
+      zoneId
+      createdAt
+    }
+  }
+`;
+
 export const NewPropertyOwnerGQL = gql`
   mutation createNewPropertyOwner($owner: PropertyOwnerInput!) {
     createPropertyOwner(owner: $owner) {

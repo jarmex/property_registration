@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { FlatList, ActivityIndicator, View, Alert } from 'react-native';
-import { ListItem, Text, Body, Right, Icon, Button } from 'native-base';
+import { ListItem, Text, Body, Right, Icon } from 'native-base';
 import { Query } from 'react-apollo';
 import { QueryPropertiesGQL } from './graphql';
 import { formatError } from '../../../util';
@@ -74,11 +74,11 @@ class PropertyOwner extends Component {
                 position="bottomRight"
                 active={this.state.active}
                 direction="up"
-                // onPress={this.addNewProperty}
-                onPress={() => this.setState({ active: !this.state.active })}
+                onPress={this.addNewProperty}
+                // onPress={() => this.setState({ active: !this.state.active })}
               >
                 <Icon name="add" />
-                <Button
+                {/* <Button
                   style={{ backgroundColor: '#DD5144' }}
                   onPress={this.addNewProperty}
                 >
@@ -89,7 +89,7 @@ class PropertyOwner extends Component {
                   onPress={this.addTenantInfo}
                 >
                   <Icon name="briefcase" />
-                </Button>
+                </Button> */}
               </FabEx>
             </View>
           );

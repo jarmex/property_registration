@@ -7,13 +7,23 @@ const { Provider, Consumer } = React.createContext();
 
 export class UserProvider extends React.Component {
   state = {
-    user: {},
+    user: null,
     onChangeUser: async (user) =>
       new Promise(async (resolve, reject) => {
         try {
           await AsyncStorage.setItem(StorageKey.user, JSON.stringify(user));
           this.setState({ user });
           resolve(user);
+        } catch (error) {
+          reject(error);
+        }
+      }),
+    onClearUser: async () =>
+      new Promise(async (resolve, reject) => {
+        try {
+          await AsyncStorage.removeItem(StorageKey.user);
+          this.setState({ user: null });
+          resolve('success');
         } catch (error) {
           reject(error);
         }

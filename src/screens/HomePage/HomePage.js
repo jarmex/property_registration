@@ -1,36 +1,47 @@
 import React, { Component } from 'react';
-import { FlatList } from 'react-native';
+import { FlatList, Alert } from 'react-native';
 import { menulist } from './menulist';
-import { StatusBarEx } from '../../components';
+import { StatusBarEx, ContainerView } from '../../components';
 import { LocalData, UserConsumer } from '../../hoc';
-import { BrowseMenuItem } from './MenuItem';
-import { OuterView, Title } from './styles';
+import { BrowseMenuItem, BannerMenuItem } from './MenuItem';
+import { Title } from './styles';
 
 class HomePage extends Component {
   static navigationOptions = {
     header: null,
   };
+  state = {
+    loadedconfiguration: false,
+  };
   getMenuItems = (savedata) => {
-    if (savedata.electoralarea) {
-      return menulist;
+    if (savedata && savedata.electoralarea) {
+      return menulist.filter((item) => item.key !== 'loadconfiguration');
     }
-    return [
-      ...menulist,
-      {
-        label: 'Load Configurations',
-        desc: `Last update: ${savedata.lastupdated}`,
-        page: 'loadconfiguration',
-        key: 'loadconfiguration',
-      },
-    ];
+    return menulist;
   };
 
-  handleMenuSelected = (item, assembly) => {
+  handleMenuSelected = async (item, assembly, onClearData, onClearUser) => {
     if (item.key === 'loadconfiguration') {
+      this.setState({ loadedconfiguration: true });
       this.props.navigation.navigate(item.page, {
         assembly,
       });
       return;
+    }
+    if (item.key === 'logout') {
+      try {
+        await onClearData();
+        await onClearUser();
+      } catch (error) {} // eslint-disable-line
+
+      this.props.navigation.navigate('login');
+      return;
+    }
+    if (!this.state.loadedconfiguration) {
+      return Alert.alert(
+        'No Configuration',
+        'No configuration loaded to memory. Please load configuration before continuing....',
+      );
     }
     if (item.page) {
       this.props.navigation.navigate(item.page);
@@ -39,34 +50,59 @@ class HomePage extends Component {
 
   render() {
     return (
-      <OuterView>
+      <ContainerView flex={1}>
         <StatusBarEx />
-        <Title>Property Registration</Title>
+        <Title>IRCM Platform</Title>
         <UserConsumer>
-          {({ user }) => (
+          {({ user, onClearUser }) => (
             <LocalData>
-              {({ data }) => {
+              {({ data, onClearData }) => {
                 const menus = this.getMenuItems(data);
+                const topmenu = menus[0];
+                const restItems = menus.slice(1);
                 return (
-                  <FlatList
-                    data={menus}
-                    renderItem={({ item }) => (
-                      <BrowseMenuItem
-                        label={item.label}
-                        desc={item.desc}
-                        onPress={() =>
-                          this.handleMenuSelected(item, user.assembly)
-                        }
-                      />
-                    )}
-                    keyExtractor={({ key }) => key}
-                  />
+                  <ContainerView flex={1}>
+                    <BannerMenuItem
+                      data={topmenu}
+                      onPress={() =>
+                        this.handleMenuSelected(
+                          topmenu,
+                          user.assembly,
+                          onClearData,
+                          onClearUser,
+                        )
+                      }
+                    />
+                    <FlatList
+                      data={restItems}
+                      contentContainerStyle={{
+                        flex: 1,
+                      }}
+                      renderItem={({ item, index }) => (
+                        <BrowseMenuItem
+                          data={item}
+                          index={index % 2 === 0}
+                          onPress={() =>
+                            this.handleMenuSelected(
+                              item,
+                              user.assembly,
+                              onClearData,
+                              onClearUser,
+                            )
+                          }
+                        />
+                      )}
+                      keyExtractor={({ key }) => key}
+                      numColumns={2}
+                      horizontal={false}
+                    />
+                  </ContainerView>
                 );
               }}
             </LocalData>
           )}
         </UserConsumer>
-      </OuterView>
+      </ContainerView>
     );
   }
 }

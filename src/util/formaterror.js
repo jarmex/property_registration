@@ -1,4 +1,7 @@
 export const formatError = (error) => {
+  if (error.networkError) {
+    return 'There is no network connectivity. Please check internet connection and try again';
+  }
   if (error.graphQLErrors) {
     return error.graphQLErrors
       .map((err) => {
@@ -9,5 +12,6 @@ export const formatError = (error) => {
       })
       .join(';');
   }
+
   return error.message;
 };

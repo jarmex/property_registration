@@ -1,17 +1,30 @@
 /* eslint import/no-unresolved: */
 
 import React, { Component } from 'react';
-import { Alert } from 'react-native';
-import { Container, Form, Item, Input, Icon, Text } from 'native-base';
-import { graphql } from 'react-apollo';
+import { Alert, KeyboardAvoidingView } from 'react-native';
+import { Form, Item, Input, Icon, Text } from 'native-base';
+import { Mutation } from 'react-apollo';
 import gql from 'graphql-tag';
+import styled from 'styled-components';
 import { Button } from '@components';
-import { formatError } from '@util';
+import { formatError } from '../../util';
 import { UserConsumer } from '../../hoc';
+import { ContainerView } from '../../components';
 
-const LoginGQL = gql`
-  mutation loginUser($username: String!, $password: String!) {
+const Title = styled.Text`
+  font-size: 30;
+  font-weight: bold;
+  padding-top: 50;
+  text-align: center;
+  padding-bottom: 50;
+  color: #243145;
+`;
+const LOGIN_QL = gql`
+  mutation login($username: String!, $password: String!) {
     login(username: $username, password: $password) {
+      id
+      firstname
+      lastname
       token
       assembly {
         id
@@ -32,7 +45,7 @@ const LoginGQL = gql`
 class LoginScreen extends Component {
   state = { username: '', password: '' };
 
-  handleLoginRequest = async (onChangeUser) => {
+  handleLoginRequest = async (login, onChangeUser) => {
     if (!this.state.username) {
       return Alert.alert('Invalid Username', 'The Username is required');
     }
@@ -40,7 +53,7 @@ class LoginScreen extends Component {
       return Alert.alert('Invalid Password', 'The password is required');
     }
     try {
-      const response = await this.props.mutate({
+      const response = await login({
         variables: {
           username: this.state.username,
           password: this.state.password,
@@ -58,42 +71,48 @@ class LoginScreen extends Component {
   };
   render() {
     return (
-      <Container
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
-        <Form style={{ padding: 15, alignSelf: 'stretch' }}>
-          <Item>
-            <Icon name="person" active />
-            <Input
-              placeholder="Username"
-              value={this.state.username}
-              onChangeText={(username) => this.setState({ username })}
-            />
-          </Item>
-          <Item style={{ marginTop: 15, marginBottom: 15 }}>
-            <Icon name="lock" active />
-            <Input
-              placeholder="Password"
-              secureTextEntry
-              value={this.state.password}
-              onChangeText={(password) => this.setState({ password })}
-            />
-          </Item>
-          <UserConsumer>
-            {({ onChangeUser }) => (
-              <Button onPress={() => this.handleLoginRequest(onChangeUser)}>
-                <Text>Login</Text>
-              </Button>
-            )}
-          </UserConsumer>
-        </Form>
-      </Container>
+      <ContainerView>
+        <Title>IRCM Platform</Title>
+        <KeyboardAvoidingView behavior="padding">
+          <Form style={{ padding: 15, alignSelf: 'stretch' }}>
+            <Item>
+              <Icon name="person" active />
+              <Input
+                placeholder="Username"
+                value={this.state.username}
+                onChangeText={(username) => this.setState({ username })}
+              />
+            </Item>
+            <Item style={{ marginTop: 15, marginBottom: 15 }}>
+              <Icon name="lock" active />
+              <Input
+                placeholder="Password"
+                secureTextEntry
+                value={this.state.password}
+                onChangeText={(password) => this.setState({ password })}
+              />
+            </Item>
+            <Mutation mutation={LOGIN_QL}>
+              {(login) => (
+                <UserConsumer>
+                  {({ onChangeUser }) => (
+                    <Button
+                      onPress={() =>
+                        this.handleLoginRequest(login, onChangeUser)
+                      }
+                    >
+                      <Text>Login</Text>
+                    </Button>
+                  )}
+                </UserConsumer>
+              )}
+            </Mutation>
+          </Form>
+        </KeyboardAvoidingView>
+      </ContainerView>
     );
   }
 }
 
-export default graphql(LoginGQL)(LoginScreen);
+// Integrated Revenue Collection and Management Platform IRCM Platform
+export default LoginScreen;

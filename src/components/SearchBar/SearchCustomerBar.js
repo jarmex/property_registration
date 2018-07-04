@@ -29,7 +29,7 @@ class SearchCustomerBar extends Component {
             onChangeText={(search) => this.setState({ search })}
           />
         </Item>
-        <Button transparent style={{ flex: 1 }}>
+        <Button transparent style={{ flex: 1 }} onPress={this.onButtonPress}>
           <Text>Search</Text>
         </Button>
       </View>

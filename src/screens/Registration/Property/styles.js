@@ -58,8 +58,13 @@ export const PendingLocationView = ({ message, position, onPress }) => (
         <TextNote>Latitude: {position.coords.latitude}</TextNote>
         <TextNote>Accuracy: {position.coords.accuracy}</TextNote>
         <TextNote>Altitude: {position.coords.altitude}</TextNote>
-        <Button onPress={onPress} transparent style={{ marginTop: 10 }}>
-          <Text>Use Location Info</Text>
+        <Button
+          onPress={() => onPress(position)}
+          transparent
+          style={{ marginTop: 10 }}
+          full
+        >
+          <Text>Use this Location</Text>
         </Button>
       </LocationView>
     )}

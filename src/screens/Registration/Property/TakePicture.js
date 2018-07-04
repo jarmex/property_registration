@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   View,
   Image,
-  CameraRoll,
   Alert,
   PermissionsAndroid,
   ToastAndroid,
@@ -44,29 +43,32 @@ export default class TakePicture extends Component {
     position: null,
     positionset: false,
     message: 'Waiting for GPS data......',
+    coords: null,
   };
   async componentDidMount() {
     try {
       const granted = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
       );
-      console.log(granted);
       if (granted === PermissionsAndroid.RESULTS.GRANTED || granted === true) {
         // WHATEVER WAY YOU WANT THEM TO KNOW THAT THEY HAVE GRANTED THE PERMISSION
         // MAY BE USING BASIC ALERT OR TOASTANDROID
         this.watchID = navigator.geolocation.watchPosition(
           (position) => {
             console.log(position); // eslint-disable-line
-            this.setState({ position });
+            this.setState({
+              position,
+              coords: position.coords,
+            });
           },
           (error) => {
             Alert.alert('Location Failed', error.message);
           },
-          { enableHighAccuracy: true, timeout: 20000 },
+          { enableHighAccuracy: true, timeout: 30000 },
         );
       } else {
         // SAME AS ABOVE
-        this.setState({ message: granted });
+        this.setState({ message: granted.toString() });
         ToastAndroid.show(
           'Location Permission not granted. Try again',
           ToastAndroid.LONG,
@@ -81,50 +83,40 @@ export default class TakePicture extends Component {
   }
 
   takePicture = async (camera) => {
+    if (!this.state.coords) {
+      return Alert.alert(
+        'Unknown Location',
+        'The location property cannot be set. Try again',
+      );
+    }
     try {
-      const options = { quality: 0.5, base64: true };
-      const data = await camera.takePictureAsync(options);
-      const saveImageLink = await CameraRoll.saveToCameraRoll(data.uri);
-      console.log(saveImageLink); // eslint-disable-line
+      const options = { quality: 0.5, base64: true, width: 400 };
+      const { uri } = await camera.takePictureAsync(options);
+      // TODO: move the picture to the picture folder
+
       this.setState({
-        source: data.uri,
-        imagedata: [
-          ...this.state.imagedata,
-          {
-            imagepath: saveImageLink,
-            originalUrl: data.uri,
-            location: this.state.position,
-          },
-        ],
+        source: uri,
+        imagedata: [...this.state.imagedata, uri],
       });
     } catch (error) {
       Alert.alert('Error', error.message);
     }
-    console.log(this.state.imagedata); // eslint-disable-line
   };
 
-  addNewProperty = async (data, onNewProperty) => {
+  addNewProperty = async (ldata, onStateChange) => {
     const { params } = this.props.navigation.state;
     // save the informaiton to memory before proceeding
-    try {
-      const newpropdata = {
-        type: 'property',
+    const newldata = Object.assign({}, ldata, {
+      property: {
+        type: 'images',
         ownerid: params.id,
         name: params.name,
-        data: this.state.imagedata,
-      };
-      if (data === null) {
-        const newdata = [newpropdata];
-        await onNewProperty(newdata);
-      } else {
-        // append the data to the existing one
-        const existdata = [...data, newpropdata];
-        await onNewProperty(existdata);
-      }
-    } catch (err) {
-      Alert.alert('Error', err.message);
-      return;
-    }
+        ...this.state.coords,
+        imagepath: this.state.imagedata,
+      },
+    });
+    // update the state data
+    onStateChange(newldata);
 
     this.props.navigation.navigate('newproperty', {
       id: params.id,
@@ -133,7 +125,10 @@ export default class TakePicture extends Component {
   };
 
   _handleUseLocation = () => {
-    this.setState({ positionset: true });
+    this.setState({
+      positionset: true,
+    });
+    navigator.geolocation.clearWatch(this.watchID);
   };
   render() {
     if (!this.state.positionset) {
@@ -196,9 +191,9 @@ export default class TakePicture extends Component {
                 }}
               >
                 <LocalData>
-                  {({ registerdata: data, onNewProperty }) => (
+                  {({ ldata, onStateChange }) => (
                     <TouchableOpacity
-                      onPress={() => this.addNewProperty(data, onNewProperty)}
+                      onPress={() => this.addNewProperty(ldata, onStateChange)}
                     >
                       <DoneText>Done</DoneText>
                     </TouchableOpacity>
