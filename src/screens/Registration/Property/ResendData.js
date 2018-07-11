@@ -23,54 +23,50 @@ class ResendData extends Component {
         async () => {
           // filter properties
           const properties = registerdata.filter(
-            (ptype) => ptype.type === 'property',
+            (ptype) => ptype.type === 'images',
           );
           properties.forEach((property) => {
             const message = `Sending data for ${
               property.name
             } with property ID=${property.propertyid}`;
+
             this.setState({ message }, async () => {
-              const data = new FormData();
-              data.append('name', property.name);
-              data.append('ownerid', property.ownerid);
-              data.append('propertyid', property.propertyid);
-              data.append('type', property.type);
-              property.data.forEach((photo, index) => {
-                data.append('longitude', photo.location.longitude);
-                data.append('latitude', photo.location.latitude);
-                data.append('accuracy', photo.location.accuracy);
-                data.append('photos', {
-                  uri: photo.imagepath,
-                  type: 'image/jpeg',
-                  name: `photos-${index}`,
+              const dataToSend = new FormData();
+              dataToSend.append('name', property.propertyname);
+              dataToSend.append('ownerid', property.ownerid);
+              dataToSend.append('propertyid', property.propertyid);
+              dataToSend.append('longitude', property.longitude);
+              dataToSend.append('latitude', property.latitude);
+              dataToSend.append('accuracy', property.accuracy);
+              dataToSend.append('createdby', property.createdby);
+              property.imagepath.forEach((item) => {
+                // get the file name here
+                const filename = item.split('/').pop();
+                dataToSend.append('photos', {
+                  uri: item,
+                  type: 'image/jpg',
+                  name: filename,
                 });
               });
               // send data
-              console.log(data);
+              // console.log(dataToSend);
               try {
-                const res = await futch(
-                  config.updatePhotosURL,
-                  {
-                    method: 'post',
-                    body: data,
+                await futch(config.updatePhotosURL, {
+                  headers: {
+                    'Cache-Control': 'no-cache',
+                    'Content-Type': 'multipart/form-data',
                   },
-                  (e) => {
-                    const progressIndicator = e.loaded / e.total;
-                    console.log('progressIndicator', progressIndicator);
-                    // this.setState({
-                    //   progress: progressIndicator,
-                    // });
-                  },
-                );
-                console.log(res);
+                  method: 'POST',
+                  body: dataToSend,
+                });
               } catch (errors) {
-                console.log(errors.message);
+                // console.log(errors.message);
                 toretry.push(property);
               }
             });
           });
           // save and failed data
-          const nonProperty = registerdata.filter((f) => f.type !== 'property');
+          const nonProperty = registerdata.filter((f) => f.type !== 'images');
           const remainData = [...nonProperty, ...toretry];
           if (remainData.length === 0) {
             await onClearProperty();
@@ -93,7 +89,7 @@ class ResendData extends Component {
       <LocalData>
         {(ldata) => {
           const { registerdata } = ldata;
-          console.log(registerdata);
+          // console.log(registerdata);
           const counter = registerdata === null ? 0 : registerdata.length;
           return (
             <CenterView>

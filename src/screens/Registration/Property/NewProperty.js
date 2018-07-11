@@ -165,6 +165,8 @@ class NewProperty extends Component {
       // save to disk and clear the memory for this property data
       const sTodisk = Object.assign({}, property, {
         propertyid: result.data.createProperty.id,
+        propertyname: this.state.name,
+        createdby: user.id,
       });
       const datatosave = [...registerdata, sTodisk];
       await onNewProperty(datatosave);

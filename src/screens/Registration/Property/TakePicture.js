@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { RNCamera } from 'react-native-camera';
 import { Icon } from 'native-base';
+import RNFetchBlob from 'rn-fetch-blob';
 import { LocalData } from '../../../hoc';
 import {
   ButtonViewItems,
@@ -20,6 +21,7 @@ import {
   OuterPendingView,
   PendingLocationView,
 } from './styles';
+import { CenterView } from '../../../components';
 
 const PendingView = () => (
   <OuterPendingView>
@@ -32,9 +34,11 @@ const NotAuthorizedView = () => (
   </OuterPendingView>
 );
 
+const IMAGE_PATH = `${RNFetchBlob.fs.dirs.DocumentDir}/IRCMPlatform`;
 export default class TakePicture extends Component {
   static navigationOptions = {
     title: 'Property Images',
+    header: null,
   };
   state = {
     source: null,
@@ -44,37 +48,57 @@ export default class TakePicture extends Component {
     positionset: false,
     message: 'Waiting for GPS data......',
     coords: null,
+    permission: true,
   };
   async componentDidMount() {
     try {
-      const granted = await PermissionsAndroid.request(
+      // create a folder for storing the pictures
+      const folderpermission = await PermissionsAndroid.requestMultiple([
         PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      );
-      if (granted === PermissionsAndroid.RESULTS.GRANTED || granted === true) {
-        // WHATEVER WAY YOU WANT THEM TO KNOW THAT THEY HAVE GRANTED THE PERMISSION
-        // MAY BE USING BASIC ALERT OR TOASTANDROID
-        this.watchID = navigator.geolocation.watchPosition(
-          (position) => {
-            console.log(position); // eslint-disable-line
-            this.setState({
-              position,
-              coords: position.coords,
-            });
-          },
-          (error) => {
-            Alert.alert('Location Failed', error.message);
-          },
-          { enableHighAccuracy: true, timeout: 30000 },
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+        PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+        PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+      ]);
+
+      if (folderpermission) {
+        const filterpm = Object.keys(folderpermission).map(
+          (permission) =>
+            folderpermission[permission] === PermissionsAndroid.RESULTS.GRANTED,
         );
-      } else {
-        // SAME AS ABOVE
-        this.setState({ message: granted.toString() });
-        ToastAndroid.show(
-          'Location Permission not granted. Try again',
-          ToastAndroid.LONG,
-        );
+
+        const result = filterpm.some((item) => item === false);
+        if (result) {
+          ToastAndroid.show(
+            'Permissions not granted. Kindly grant permission in order for the app to work correctly.',
+            ToastAndroid.LONG,
+          );
+          this.setState({
+            message: 'Permissions not fully granted. ',
+            permission: false,
+          });
+          return;
+        }
       }
+      const folderexist = await RNFetchBlob.fs.isDir(IMAGE_PATH);
+      if (!folderexist) {
+        await RNFetchBlob.fs.mkdir(IMAGE_PATH);
+      }
+      // console.log('testing here');
+      this.watchID = navigator.geolocation.watchPosition(
+        (position) => {
+          console.log(position); // eslint-disable-line
+          this.setState({
+            position,
+            coords: position.coords,
+          });
+        },
+        (error) => {
+          Alert.alert('Location Failed', error.message);
+        },
+        { enableHighAccuracy: true, timeout: 30000 },
+      );
     } catch (error) {
+      this.setState({ message: error.message });
       Alert.alert('Permission', error.message);
     }
   }
@@ -90,13 +114,17 @@ export default class TakePicture extends Component {
       );
     }
     try {
-      const options = { quality: 0.5, base64: true, width: 400 };
+      const options = { quality: 0.5, base64: false, width: 400 };
       const { uri } = await camera.takePictureAsync(options);
       // TODO: move the picture to the picture folder
-
+      const newUri = uri.split('//')[1];
+      const filename = newUri.split('/').pop();
+      const imagefilepath = `${IMAGE_PATH}/${filename}`;
+      await RNFetchBlob.fs.mv(newUri, imagefilepath);
+      const fileupload = `file://${imagefilepath}`;
       this.setState({
-        source: uri,
-        imagedata: [...this.state.imagedata, uri],
+        source: fileupload,
+        imagedata: [...this.state.imagedata, fileupload],
       });
     } catch (error) {
       Alert.alert('Error', error.message);
@@ -138,6 +166,13 @@ export default class TakePicture extends Component {
           position={this.state.position}
           onPress={this._handleUseLocation}
         />
+      );
+    }
+    if (!this.state.permission) {
+      return (
+        <CenterView>
+          <Text>{this.state.message}</Text>
+        </CenterView>
       );
     }
     return (

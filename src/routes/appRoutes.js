@@ -22,6 +22,8 @@ import TransactionHistory from '../screens/History/TransactionHistory';
 import PaymentOptions from '../screens/Payments/PaymentTypes';
 import QueryInvoices from '../screens/Invoices/QueryInvoices';
 
+import { Pages, ViewInvoiceDetails } from '../screens';
+
 const transitionConfig = () => ({
   transitionSpec: {
     duration: 100, // 300
@@ -63,6 +65,7 @@ const appStackNavigation = createStackNavigator(
     history: TransactionHistory,
     invoices: QueryInvoices,
     paymentoptions: PaymentOptions,
+    [Pages.InvoiceDetails]: ViewInvoiceDetails,
   },
   {
     initialRouteName: 'home',

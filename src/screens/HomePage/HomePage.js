@@ -10,11 +10,14 @@ class HomePage extends Component {
   static navigationOptions = {
     header: null,
   };
-  state = {
-    loadedconfiguration: false,
-  };
+  constructor(props) {
+    super(props);
+    this.loadedconfiguration = false;
+  }
+
   getMenuItems = (savedata) => {
     if (savedata && savedata.electoralarea) {
+      this.loadedconfiguration = true;
       return menulist.filter((item) => item.key !== 'loadconfiguration');
     }
     return menulist;
@@ -22,7 +25,6 @@ class HomePage extends Component {
 
   handleMenuSelected = async (item, assembly, onClearData, onClearUser) => {
     if (item.key === 'loadconfiguration') {
-      this.setState({ loadedconfiguration: true });
       this.props.navigation.navigate(item.page, {
         assembly,
       });
@@ -37,7 +39,7 @@ class HomePage extends Component {
       this.props.navigation.navigate('login');
       return;
     }
-    if (!this.state.loadedconfiguration) {
+    if (!this.loadedconfiguration) {
       return Alert.alert(
         'No Configuration',
         'No configuration loaded to memory. Please load configuration before continuing....',
